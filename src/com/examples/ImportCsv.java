@@ -20,45 +20,30 @@ public class ImportCsv
 
 				try (CSVReader reader = new CSVReader(new FileReader("Employee.csv"), ','); Connection connection = DBConnection.getConnection();)
 				{
-						String insertQuery = "Insert into Employee(id,name, contact_no, address) values (null,?,?,?)";
-						PreparedStatement pstmt = connection.prepareStatement(insertQuery);
-						String[] rowData = null;
-						int i = 0;
-						while((rowData = reader.readNext()) != null){
-						for (String data : rowData)
-						{
-								pstmt.setString((i % 3) + 1, data);
-
-								if (++i % 3 == 0)
-										pstmt.addBatch();// add batch
-
-								if (i % 30 == 0)// insert when the batch size is 10
-										pstmt.executeBatch();
-						}}
-						System.out.println("Data Successfully Uploaded");
-				}
-				catch (Exception e)
-				{
-						e.printStackTrace();
-				}
-
-		}
-
-		private static void readCsvUsingLoad()
-		{
-				try (Connection connection = DBConnection.getConnection())
-				{
-
-						String loadQuery = "LOAD DATA LOCAL INFILE '" + "C:\\Employee.csv" + "' INTO TABLE Employee FIELDS TERMINATED BY ','"
-										+ " LINES TERMINATED BY '\n' (id, Name, Contact, Address) ";
-						System.out.println(loadQuery);
-						Statement stmt = connection.createStatement();
-						stmt.execute(loadQuery);
-				}
-				catch (Exception e)
-				{
-						e.printStackTrace();
-				}
-		}
-
+						String insertQuery = "Insert into Employee(id,name, contact_no, address) values (?,?,?,?)";
+						PreparedStatement pstatement = connection.prepareStatement(insertQuery);
+						String [] nextValue; 
+            				int i = 0;											while ((nextValue= reader.readNext()) != null) {
+                        i++;
+				pstatement.setInt(1, nextValue[0]);
+                        pstatement.setString(2, nextValue[1]);                   	pstatement.setDouble(3,Double.parseDouble(nextValue[2]));
+pstatement.setString(4, nextValue[3]);
+                        // Add the record to batch
+                        pstatement.addBatch();
+                }                                   
+                int[] totalRecords = new int[5];
+                try {
+                        totalRecords = pstatement .executeBatch();
+                } catch(BatchUpdateException e) {
+                        //you should handle exception for failed records here
+                        totalRecords = e.getUpdateCounts();
+                }
+                System.out.println ("Total records inserted in bulk from CSV file " + totalRecords.length);                
+                /* Close prepared statement */
+                pstatement .close();
+                /* COMMIT transaction */
+                conn.commit();
+                /* Close connection */
+                conn.close();
+        }
 }
